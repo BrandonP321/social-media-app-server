@@ -17,7 +17,7 @@ const schema = new Schema({
         ref: "User",
         required: 'Username required'
     },
-    realName: {
+    name: {
         type: String,
         trim: true,
         required: 'Real name required'
