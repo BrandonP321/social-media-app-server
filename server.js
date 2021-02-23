@@ -17,6 +17,7 @@ app.use(express.json());
 // routes
 app.use('/api', require('./routes/post'))
 app.use('/api', require('./routes/user'))
+app.use('/api', require('./routes/auth'))
 
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost/social-media-app', { useNewUrlParser: true, useUnifiedTopology: true, useCreateIndex: true, useFindAndModify: false })
 

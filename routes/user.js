@@ -1,10 +1,58 @@
 const router = require('express').Router();
 const mongoose = require('mongoose');
 const db = require('../models');
+const jwt = require('jsonwebtoken')
 
 router.get('/user/all', (req, res) => {
     db.User.find({}, (err, data) => {
         res.json(data)
+    })
+})
+
+router.get('/user/:username', (req, res) => {
+    // because usernames are unique, we can just search for the user in the db by their username
+    db.User.findOne({ username: req.params.username }, (err, data) => {
+        // if user not found send status 404
+        if (!data) return res.status(404).send("User not found").end();
+        // if an error showed up, send status 500
+        if (err) return res.status(500).send("An error has occured").end();
+
+
+        // create modified obj to send to client
+        const user = {
+            id: data._id,
+            username: data.username,
+            name: data.name,
+            followersCount: data.followers.length,
+            followingCount: data.following.length,
+            profileImg: data.profilePicture,
+            bio: data.bio
+        }
+        
+        // if the user visiting the page is different from the profile page's user, add whether or not the user visiting the page is following the profile page user
+        if (data.username !== req.body.visitingUser) {
+            // iterate over array of user's followers
+            for (let follower of data.followers) {
+                // if follower's username is same as visiting user's username, update user obj and break out of loop
+                if (follower === req.body.visitingUser) {
+                    user.isFollowing = true
+                }
+            }
+        }
+
+        res.json(user).end();
+    })
+})
+
+router.get('/user/:id/posts', (req, res) => {
+    let id = mongoose.Types.ObjectId(req.params.id)
+
+    // get all posts by the user from the db
+    db.Post.find({ creator: id }, (err, data) => {
+        // send status 500 if there was an error
+        if (err) return res.status(500).send("An error has occurred").end();
+
+        res.json(data);
     })
 })
 
@@ -42,9 +90,15 @@ router.post('/user/login', (req, res) => {
         // if passwords don't match, send status 401 for incorrect email or password
         if (!isValidPassword) return res.status(401).send("Incorrect email or password").end();
 
-        // if passwords match, send user id and jwt to client
-        res.json(user._id).end();
+        // if passwords match, create jwt and send to client
+        const userObj = { id: user._id, username: user.username }
+        const accessToken = generateAccessToken(userObj)
+        res.header('auth-token', accessToken).json(userObj).end();
     })
 })
 
 module.exports = router
+
+function generateAccessToken(user) {
+    return jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '30m' })
+}

@@ -18,11 +18,7 @@ const schema = new Schema({
         trim: true,
         required: false
     },
-    likesAmount: {
-        type: Number,
-        default: 0
-    },
-    usersWhoLike: {
+    likedBy: {
         type: Array,
         default: []
     },
