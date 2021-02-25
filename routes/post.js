@@ -33,9 +33,9 @@ router.get('/posts/following', authenticateToken, (req, res) => {
         if (err) return res.status(500).send("Error has occurred").end();
 
         const { following } = data
-        console.log(following)
         // push user's id to following array to display their posts as well
         following.push(req.user.id)
+        console.log(following)
         // get all posts by a user the current user is following
         db.Post.find({ creator: {$in: following } }).
         sort({createdAt: 'desc'}).
@@ -43,7 +43,7 @@ router.get('/posts/following', authenticateToken, (req, res) => {
         exec((err, data) => {
             if (err) return res.status(500).send("An error has occurred").end();
 
-            res.json(data)
+            res.json({ posts: data, user: req.user })
         })
     })
 })

@@ -1,7 +1,8 @@
 const router = require('express').Router();
 const mongoose = require('mongoose');
 const db = require('../models');
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
+const authenticateToken = require('./authenticateToken');
 
 router.get('/user/all', (req, res) => {
     db.User.find({}, (err, data) => {
@@ -26,7 +27,8 @@ router.get('/user/:username', (req, res) => {
             followersCount: data.followers.length,
             followingCount: data.following.length,
             profileImg: data.profilePicture,
-            bio: data.bio
+            bio: data.bio,
+            email: data.email
         }
         
         // if the user visiting the page is different from the profile page's user, add whether or not the user visiting the page is following the profile page user
@@ -94,6 +96,35 @@ router.post('/user/login', (req, res) => {
         const userObj = { id: user._id, username: user.username }
         const accessToken = generateAccessToken(userObj)
         res.header('auth-token', accessToken).json(userObj).end();
+    })
+})
+
+router.put('/user/update', authenticateToken, (req, res) => {
+    console.log(req.body)
+    console.log(req.user)
+    // update user in db
+    db.User.updateOne({ _id: req.user.id }, req.body, (err, data) => {
+        if (err) {
+            console.log('err')
+            if (err.keyValue.email) {
+                // if email is not unique, return status 409
+                return res.status(409).send("Email taken").end();
+            }
+
+            if (err.keyValue.username) {
+                // if username is not unique, return status 422
+                return res.status(422).send("Username taken").end()
+            }
+
+            // if no unique errors were thrown, return status 500
+            return res.status(500).send("Error has occurred").end();
+        }
+        console.log('data:', data)
+        // if update was successful, create new access token with new email/username
+        const token = generateAccessToken({ id: req.body.id, username: req.body.username })
+
+        // send new username to client with new token in header
+        res.header('auth-token', token).json({ username: req.body.username }).end();
     })
 })
 

@@ -6,7 +6,8 @@ const Schema = mongoose.Schema
 const schema = new Schema({
     email: {
         type: String,
-        required: "Email required"
+        required: "Email required",
+        unique: true
     },
     password: {
         type: String,
@@ -15,6 +16,7 @@ const schema = new Schema({
     username: {
         type: String,
         ref: "User",
+        unique: true,
         required: 'Username required'
     },
     name: {
