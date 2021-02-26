@@ -10,7 +10,7 @@ router.get('/user/all', (req, res) => {
     })
 })
 
-router.get('/user/:username', (req, res) => {
+router.get('/user/:username', authenticateToken, (req, res) => {
     // because usernames are unique, we can just search for the user in the db by their username
     db.User.findOne({ username: req.params.username }, (err, data) => {
         // if user not found send status 404
@@ -30,13 +30,13 @@ router.get('/user/:username', (req, res) => {
             bio: data.bio,
             email: data.email
         }
-        
+
         // if the user visiting the page is different from the profile page's user, add whether or not the user visiting the page is following the profile page user
         if (data.username !== req.body.visitingUser) {
             // iterate over array of user's followers
             for (let follower of data.followers) {
                 // if follower's username is same as visiting user's username, update user obj and break out of loop
-                if (follower === req.body.visitingUser) {
+                if (follower === req.user.id) {
                     user.isFollowing = true
                 }
             }
@@ -51,13 +51,13 @@ router.get('/user/:id/posts', (req, res) => {
 
     // get all posts by the user from the db
     db.Post.find({ creator: id }).
-    sort({ createdAt: 'desc' }).
-    exec((err, data) => {
-        // send status 500 if there was an error
-        if (err) return res.status(500).send("An error has occurred").end();
+        sort({ createdAt: 'desc' }).
+        exec((err, data) => {
+            // send status 500 if there was an error
+            if (err) return res.status(500).send("An error has occurred").end();
 
-        res.json(data);
-    })
+            res.json(data);
+        })
 })
 
 router.post('/user/create', (req, res) => {
@@ -138,8 +138,8 @@ router.put('/user/:id/follow', authenticateToken, (req, res) => {
     const currentUserId = req.user.id
     // add the user to follow to the array of followed users for current user
     db.User.updateOne(
-        { _id: currentUserId }, 
-        { $push: { following: userToFollowId } }, 
+        { _id: currentUserId },
+        { $push: { following: userToFollowId } },
         (err, data) => {
             if (err) {
                 console.log(err)
@@ -149,7 +149,7 @@ router.put('/user/:id/follow', authenticateToken, (req, res) => {
             // now update array of follower for user being followed
             db.User.updateOne(
                 { _id: mongoose.Types.ObjectId(userToFollowId) },
-                { $push: { followers: currentUserId }},
+                { $push: { followers: currentUserId } },
                 (err, data) => {
                     if (err) {
                         console.log(err)
@@ -165,6 +165,33 @@ router.put('/user/:id/follow', authenticateToken, (req, res) => {
 router.put('/user/:id/unfollow', authenticateToken, (req, res) => {
     console.log('unfollow user')
     console.log(req.body)
+    const userToUnfollowId = req.params.id;
+    const currentUserId = req.user.id
+    // remove user to unfollow from current user's array of followed users
+    db.User.updateOne(
+        { _id: currentUserId },
+        { $pullAll: { following: [userToUnfollowId] } },
+        (err, data) => {
+            // if error occurred, send status 500
+            if (err) {
+                console.log(err)
+                return res.status(500).send("Error occurred while unfollowing user").end();
+            }
+
+            // if successful, remove current user from array of followers for user to unfollow
+            db.User.updateOne(
+                { _id: mongoose.Types.ObjectId(userToUnfollowId) },
+                { $pullAll: { followers: [currentUserId] } },
+                (err, data) => {
+                    // if err, send status 500
+                    if (err) {
+                        return res.status(500).send('Error while removing user from followers array').end();
+                    }
+
+                    // if successful, send good status to client
+                    res.json(200).end()
+                })
+        })
 })
 
 module.exports = router
