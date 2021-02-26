@@ -48,4 +48,40 @@ router.get('/posts/following', authenticateToken, (req, res) => {
     })
 })
 
+// route to like a post
+router.put('/post/:id/like', authenticateToken, (req, res) => {
+    const id = mongoose.Types.ObjectId(req.params.id)
+    // push id of new user to array of users who have liked the post
+    db.Post.updateOne(
+        { _id: id },
+        { $push: { likedBy: req.user.id } },
+        (err, data) => {
+            if (err) {
+                console.log(err)
+                return res.status(500).send("An error occurred while updating").end();
+            }
+            
+            res.json(data)
+        })
+    })
+    
+    // route to unlike a post
+    router.put('/post/:id/unlike', authenticateToken, (req, res) => {
+        const id = mongoose.Types.ObjectId(req.params.id)
+        console.log('unliking')
+        // remove user id from array of users who have liked the post
+    db.Post.updateOne(
+        { _id: id },
+        { $pullAll: { likedBy: [req.user.id] } },
+        (err, data) => {
+            if (err) {
+                console.log(err)
+                return res.status(500).send("Error occurred while unliking").end()
+            }
+
+            res.json(data).end();
+        }
+    )
+})
+
 module.exports = router
