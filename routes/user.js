@@ -61,23 +61,24 @@ router.get('/user/:id/posts', (req, res) => {
 })
 
 router.post('/user/create', (req, res) => {
+    console.log('creating')
     // check for any users with the same email
     db.User.findOne({ email: req.body.email }, (err, data) => {
         console.log(data)
         // if user found, email is taken; send status 409
         if (data) return res.status(409).send('Email taken').end();
-
+        console.log('email not taken')
         // else check for any user with same username
         db.User.findOne({ username: req.body.username }, (err, data) => {
             console.log(data)
             // if user found, username is taken; send status 422
             if (data) return res.status(422).send("Username taken").end();
-
+            console.log('username not taken')
             // else create new document in database for user
             db.User.create(req.body, (err, data) => {
                 // create jwt
                 const token = generateAccessToken({ id: data._id, username: data.username })
-
+                console.log('user created')
                 res.header('auth-token', token).json(data).end();
             })
         })
@@ -122,13 +123,48 @@ router.put('/user/update', authenticateToken, (req, res) => {
             // if no unique errors were thrown, return status 500
             return res.status(500).send("Error has occurred").end();
         }
-        console.log('data:', data)
         // if update was successful, create new access token with new email/username
         const token = generateAccessToken({ id: req.body.id, username: req.body.username })
 
         // send new username to client with new token in header
         res.header('auth-token', token).json({ username: req.body.username }).end();
     })
+})
+
+router.put('/user/:id/follow', authenticateToken, (req, res) => {
+    console.log('follow user')
+    console.log(req.user)
+    const userToFollowId = req.params.id
+    const currentUserId = req.user.id
+    // add the user to follow to the array of followed users for current user
+    db.User.updateOne(
+        { _id: currentUserId }, 
+        { $push: { following: userToFollowId } }, 
+        (err, data) => {
+            if (err) {
+                console.log(err)
+                return res.status(500).send("Error while updating following array").end()
+            }
+
+            // now update array of follower for user being followed
+            db.User.updateOne(
+                { _id: mongoose.Types.ObjectId(userToFollowId) },
+                { $push: { followers: currentUserId }},
+                (err, data) => {
+                    if (err) {
+                        console.log(err)
+                        return res.status(500).send("Error while updating array of followers").end();
+                    }
+
+                    // if successful, send good status to client
+                    res.status(200).end();
+                })
+        })
+})
+
+router.put('/user/:id/unfollow', authenticateToken, (req, res) => {
+    console.log('unfollow user')
+    console.log(req.body)
 })
 
 module.exports = router
