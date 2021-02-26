@@ -61,7 +61,6 @@ router.get('/user/:id/posts', (req, res) => {
 })
 
 router.post('/user/create', (req, res) => {
-    console.log(req.body)
     // check for any users with the same email
     db.User.findOne({ email: req.body.email }, (err, data) => {
         console.log(data)
@@ -76,14 +75,16 @@ router.post('/user/create', (req, res) => {
 
             // else create new document in database for user
             db.User.create(req.body, (err, data) => {
-                res.json(data).end();
+                // create jwt
+                const token = generateAccessToken({ id: data._id, username: data.username })
+
+                res.header('auth-token', token).json(data).end();
             })
         })
     })
 })
 
 router.post('/user/login', (req, res) => {
-    console.log(req.body)
     db.User.findOne({ email: req.body.email }, async (err, user) => {
         console.log(user)
         // if no user found, send status 401 for incorrect email or password
