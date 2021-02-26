@@ -50,7 +50,9 @@ router.get('/user/:id/posts', (req, res) => {
     let id = mongoose.Types.ObjectId(req.params.id)
 
     // get all posts by the user from the db
-    db.Post.find({ creator: id }, (err, data) => {
+    db.Post.find({ creator: id }).
+    sort({ createdAt: 'desc' }).
+    exec((err, data) => {
         // send status 500 if there was an error
         if (err) return res.status(500).send("An error has occurred").end();
 
