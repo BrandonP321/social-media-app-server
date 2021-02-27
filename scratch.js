@@ -1,14 +1,11 @@
-const arr = [
-    {
-        one: 'hi'
-    },
-    {
-        one: 'hello'
-    }
-]
+const str = 'brandonp321'
 
-for (let thing of arr) {
-    thing.test = 'hi'
-}
 
-console.log(arr)
+
+let query = 'brandon'
+const regex = new RegExp(`${query}`, 'i')
+
+let result = regex.test(str)
+
+
+console.log(result)

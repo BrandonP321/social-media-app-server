@@ -60,6 +60,30 @@ router.get('/user/:id/posts', (req, res) => {
         })
 })
 
+router.get('/user/search/:query', (req, res) => {
+    console.log(req.params.query)
+    const query = req.params.query
+    // perform LIKE search for users with same or similar usernames or names
+    db.User.find(
+        {
+            $or: [
+                { username: new RegExp(`^${query}`, 'i') },
+                { name: new RegExp(`^${query}`, 'i') }
+            ]
+        }, 
+        (err, data) => {
+            // if error, send status 500
+            if (err) {
+                console.log(err)
+                return res.status(500).send("Error while searching").end();
+            }
+
+            console.log(data)
+            // send users array back to client
+            res.json(data).end();
+        })
+})
+
 router.post('/user/create', (req, res) => {
     console.log('creating')
     // check for any users with the same email
@@ -163,8 +187,6 @@ router.put('/user/:id/follow', authenticateToken, (req, res) => {
 })
 
 router.put('/user/:id/unfollow', authenticateToken, (req, res) => {
-    console.log('unfollow user')
-    console.log(req.body)
     const userToUnfollowId = req.params.id;
     const currentUserId = req.user.id
     // remove user to unfollow from current user's array of followed users
